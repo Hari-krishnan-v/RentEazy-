@@ -1,0 +1,29 @@
+{
+  "name": "@renteazy/notification-service",
+  "version": "0.0.1",
+  "private": true,
+  "nx": {
+    "targets": {
+      "serve": {
+        "continuous": true,
+        "executor": "@nx/js:node",
+        "defaultConfiguration": "development",
+        "dependsOn": [
+          "build"
+        ],
+        "options": {
+          "buildTarget": "@renteazy/notification-service:build",
+          "runBuildTargetDependencies": false
+        },
+        "configurations": {
+          "development": {
+            "buildTarget": "@renteazy/notification-service:build:development"
+          },
+          "production": {
+            "buildTarget": "@renteazy/notification-service:build:production"
+          }
+        }
+      }
+    }
+  }
+}
