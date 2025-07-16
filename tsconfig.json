@@ -4,10 +4,22 @@
   "files": [],
   "references": [
     {
-      "path": "./apps/auth-service-e2e"
+      "path": "./apps/auth-service"
     },
     {
-      "path": "./apps/auth-service"
+      "path": "./apps/property-service"
+    },
+    {
+      "path": "./apps/booking-service"
+    },
+    {
+      "path": "./apps/notification-service"
+    },
+    {
+      "path": "./apps/api-gateway"
+    },
+    {
+      "path": "./apps/payment-service"
     }
   ]
 }
