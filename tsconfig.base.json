@@ -16,6 +16,8 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
-    "customConditions": ["development"]
-  }
+    "customConditions": ["development"],
+  },
+  "include": ["src", "libs", "apps",],
+  "exclude": ["node_modules", "dist"]
 }
