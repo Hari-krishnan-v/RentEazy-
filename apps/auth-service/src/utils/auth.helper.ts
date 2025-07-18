@@ -11,10 +11,10 @@ const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || "refresh_secret
 
 
 export const validateRegistrationData = (data:any,userType: "user" | "host" ) => {
-  const { email,name, password, confirmPassword } = data;
+  const { email,name,firstname,lastname,phone,altphone,location, password, confirmPassword } = data;
 
   // Check if all fields are provided
-  if (!email || !name || !password || !confirmPassword) {
+  if (userType==="user"? !email || !name || !password || !confirmPassword : !email || !firstname || !lastname || !phone || !altphone || !location || !password || !confirmPassword) {
     throw new ValidationError('All fields are required');
   }
 

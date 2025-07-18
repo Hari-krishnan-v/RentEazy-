@@ -17,25 +17,18 @@ model User {
   id        String   @id @default(uuid())
   email     String   @unique
   name      String?
+  firstname String?
+  lastname  String?
   password  String
   role      Role     @default(USER)
-  profile   Profile?
+  bio       String?
+  phone     String?
+  altphone  String?
+  avatarUrl String?
+  location  String?
   properties Property[]
   bookings  Booking[]
   payments  Payment[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-}
-
-model Profile {
-  id        String   @id @default(uuid())
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String   @unique
-  bio       String?
-  phone     String?
-  avatarUrl String?
-  location  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
