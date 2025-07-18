@@ -2,7 +2,13 @@ import crypto from 'crypto';
 import {ValidationError} from "../../../../packages/error-handler";
 import {NextFunction} from "express";
 import redis from "../../../../libs/redis";
-import {sendMail} from "../../../../libs/sendMail";
+// import {sendMail} from "../../../../libs/sendMail";
+import jwt from "jsonwebtoken";
+
+
+const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || "access_secret_key";
+const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || "refresh_secret_key";
+
 
 export const validateRegistrationData = (data:any,userType: "user" | "host" ) => {
   const { email,name, password, confirmPassword } = data;
@@ -80,7 +86,8 @@ export const trackOtpRequest = async (email:string,next:NextFunction) => {
 
 export const SendOtp = async (name:string,email:string,template:string) => {
   const otp = crypto.randomInt(10000, 99999).toString();
-  await sendMail(email, 'Verify your otp', template, { name, otp });
+  // await sendMail(email, 'Verify your otp', template, { name, otp });
+  console.log(`Sending OTP to ${email}: ${otp}`); // For testing purposes, replace with actual sendMail function
   await redis.set(`otp:${email}`, otp, { ex: 300 });
   await redis.set(`otp_cooldown:${email}`, "true", { ex: 60 });
 
@@ -105,4 +112,26 @@ export const VerifyOtp = async (email:string,otp:string,next:NextFunction) => {
   }
 }
 
+export const generateAccessToken = (userId: string) => {
+  return jwt.sign({ userId }, ACCESS_TOKEN_SECRET, { expiresIn: '15m' });
+}
 
+export const generateRefreshToken = (userId: string) => {
+  return jwt.sign({ userId }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
+}
+
+export const verifyAccessToken = (token: string) => {
+  try {
+    return jwt.verify(token, ACCESS_TOKEN_SECRET);
+  } catch (error) {
+    throw new ValidationError('Invalid access token');
+  }
+}
+
+export const verifyRefreshToken = (token: string) => {
+  try {
+    return jwt.verify(token, REFRESH_TOKEN_SECRET);
+  } catch (error) {
+    throw new ValidationError('Invalid refresh token');
+  }
+}
