@@ -11,10 +11,10 @@ const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || "refresh_secret
 
 
 export const validateRegistrationData = (data:any,userType: "user" | "host" ) => {
-  const { email,name,firstname,lastname,phone,altphone,location, password, confirmPassword } = data;
+  const { email,name,firstname,lastname, password, confirmPassword } = data;
 
   // Check if all fields are provided
-  if (userType==="user"? !email || !name || !password || !confirmPassword : !email || !firstname || !lastname || !phone || !altphone || !location || !password || !confirmPassword) {
+  if (userType==="user"? !email || !name || !password || !confirmPassword : !email || !firstname || !lastname || !password || !confirmPassword) {
     throw new ValidationError('All fields are required');
   }
 
@@ -35,6 +35,19 @@ export const validateRegistrationData = (data:any,userType: "user" | "host" ) =>
   }
 
 
+}
+
+export const validateUpdateData = (data:any,userType: "user" | "host" ) => {
+  const {phone,altPhone,bio,budgetRange,companyName,kycDocument,gstNumber,location } = data;
+
+  // Check if at least one field is provided
+  if (userType==="user"? !phone|| !altPhone || !location || !bio || !budgetRange: !companyName || !kycDocument || !gstNumber || !location) {
+    throw new ValidationError('At least one field must be provided for update');
+  }
+
+  if (phone && !/^\d{10}$/.test(phone)) {
+    throw new ValidationError('Invalid phone number format');
+  }
 }
 
 export const CheckOtpRestrictions = async (email:string,next:NextFunction) => {

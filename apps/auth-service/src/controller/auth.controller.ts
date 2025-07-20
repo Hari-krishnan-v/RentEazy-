@@ -5,13 +5,18 @@ import {
   CheckOtpRestrictions, generateAccessToken, generateRefreshToken,
   SendOtp,
   trackOtpRequest,
-  validateRegistrationData,
+  validateRegistrationData, validateUpdateData,
   VerifyOtp, verifyRefreshToken
 } from "../utils/auth.helper";
 import {ValidationError} from "../../../../packages/error-handler";
 import {setCookie} from "../utils/cookies/setCookie";
 import bcrypt from "bcrypt";
+import {  publishEvent, KafkaTopics, EventTypes } from "../../../../libs/kafka/src";
 
+
+interface AuthenticatedRequest extends Request {
+  user?: { userId: string };
+}
 // user controls
 
 export const RegisterUser = async (req:Request,res:Response, next:NextFunction) => {
@@ -113,8 +118,8 @@ export const LoginUser = async (req:Request,res:Response,next:NextFunction) => {
       return next(new ValidationError("User not found with this email"))
     }
 
-    if(user.password !== password){
-      return next(new ValidationError("Invalid password"))
+    if (!(await bcrypt.compare(password, user.password))) {
+      return next(new ValidationError("Invalid password"));
     }
 
     const accessToken = generateAccessToken(user.id);
@@ -130,9 +135,6 @@ export const LoginUser = async (req:Request,res:Response,next:NextFunction) => {
           email: user.email,
           name: user.name,
           avatarUrl: user.avatarUrl,
-          phone: user.phone,
-          altphone: user.altphone,
-          location: user.location,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt
         }
@@ -188,6 +190,83 @@ export const GetAllUsers = async (req:Request,res:Response,next:NextFunction) =>
   }
 }
 
+export const CreateUserProfile = async (req:AuthenticatedRequest,res:Response,next:NextFunction) => {
+  try {
+    const userId = req.user?.userId;
+
+    validateUpdateData(req.body, "user");
+    const data = req.body;
+    if (!userId) {
+      return next(new ValidationError("User ID is required"));
+    }
+
+    await publishEvent(KafkaTopics.USER_REQUESTS, {
+      type: EventTypes.USER_CREATE_REQUEST,
+      userId,
+      data,
+      timestamp: new Date().toISOString(),
+    });
+
+    return res.status(201).json({ message: "User profile created successfully" });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export const UpdateUserProfile = async (req:AuthenticatedRequest,res:Response,next:NextFunction) => {
+  try {
+    const userId = req.user?.userId;
+    validateUpdateData(req.body, "user");
+    const data = req.body;
+    if (!userId) {
+      return next(new ValidationError("User ID is required"));
+    }
+
+    await publishEvent(KafkaTopics.USER_REQUESTS, {
+      type: EventTypes.USER_UPDATE_REQUEST,
+      userId,
+      data,
+      timestamp: new Date().toISOString(),
+    });
+
+    return res.status(200).json({ message: "User profile updated successfully" });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export const GetUserProfile = async (req:AuthenticatedRequest,res:Response,next:NextFunction) => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return next(new ValidationError("User ID is required"));
+    }
+
+    const user = await prisma.userProfile.findUnique({
+      where: { userId },
+      select: {
+        id: true,
+        phone: true,
+        altPhone: true,
+        location: true,
+        bio: true,
+        budgetRange: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    if (!user) {
+      return next(new ValidationError("User not found"));
+    }
+
+    return res.status(200).json({ user });
+  } catch (error) {
+    next(error);
+  }
+}
+
 
 // HOST controller
 export const RegisterHost = async (req:Request,res:Response,next:NextFunction) => {
@@ -219,14 +298,14 @@ export const RegisterHost = async (req:Request,res:Response,next:NextFunction) =
 export const VerifyHostOtp = async (req:Request,res:Response,next:NextFunction) => {
   try {
     validateRegistrationData(req.body,"host")
-    const{email,firstname,lastname,phone,altphone,location,password,otp} = req.body;
+    const{email,firstname,lastname,password,otp} = req.body;
 
     if(!otp){
       return next(new ValidationError("Otp is required"))
     }
 
     const existingHost = await prisma.user.findUnique({
-      where: { email  },
+      where: { email,role: "HOST" },
     });
 
     if(existingHost){
@@ -241,9 +320,6 @@ export const VerifyHostOtp = async (req:Request,res:Response,next:NextFunction) 
         email,
         firstname,
         lastname,
-        phone,
-        altphone,
-        location,
         role: "HOST",
         password:hashedPassword,
       },
@@ -262,9 +338,6 @@ export const VerifyHostOtp = async (req:Request,res:Response,next:NextFunction) 
           email: host.email,
           firstname: host.firstname,
           lastname: host.lastname,
-          phone: host.phone,
-          altphone: host.altphone,
-          location: host.location,
           createdAt: host.createdAt,
           updatedAt: host.updatedAt
         }
@@ -285,9 +358,6 @@ export const GetAllHosts = async (req:Request,res:Response,next:NextFunction) =>
         email: true,
         firstname: true,
         lastname: true,
-        phone: true,
-        altphone: true,
-        location: true,
         createdAt: true,
         updatedAt: true
       }
@@ -336,9 +406,6 @@ export const LoginHost = async (req:Request,res:Response,next:NextFunction) => {
           email: host.email,
           firstname: host.firstname,
           lastname: host.lastname,
-          phone: host.phone,
-          altphone: host.altphone,
-          location: host.location,
           createdAt: host.createdAt,
           updatedAt: host.updatedAt
         }

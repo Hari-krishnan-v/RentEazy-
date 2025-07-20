@@ -1,12 +1,15 @@
 import {Router} from "express";
 import {
+  CreateUserProfile,
   GetAllHosts,
-  GetAllUsers, LoginHost,
+  GetAllUsers, GetUserProfile, LoginHost,
   LoginUser, Logout,
   RefreshAccessToken, RegisterHost,
-  RegisterUser, VerifyHostOtp,
+  RegisterUser, UpdateUserProfile, VerifyHostOtp,
   VerifyUserOtp
 } from "../controller/auth.controller";
+import {initKafka} from "../../../../libs/kafka/src";
+import {Authenticate} from "../../../../packages/middleware/authenticate.middleware";
 
 const router:Router = Router();
 
@@ -24,6 +27,9 @@ router.post("/login-user", LoginUser);
 router.get("/logout",Logout)
 router.get("/refesh",RefreshAccessToken);
 router.get("/get-all-users", GetAllUsers);
+router.patch("/update-user-profile",Authenticate,  UpdateUserProfile);
+router.post("/create-profile", Authenticate, CreateUserProfile);
+router.get("/get-user-profiles", Authenticate, GetUserProfile);
 
 // host auth routes
 
@@ -31,5 +37,9 @@ router.post("/register-host", RegisterHost);
 router.post("/verify-host-otp", VerifyHostOtp);
 router.post("/login-host", LoginHost);
 router.get("get-all-hosts", GetAllHosts);
+
+(async () => {
+  await initKafka();
+})();
 
 export default router;

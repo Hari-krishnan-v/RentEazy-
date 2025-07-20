@@ -12,8 +12,8 @@ export const Authenticate = (req: any, res: any, next: any) => {
   }
 
   try {
-    const user = jwt.verify(accessToken, ACCESS_TOKEN_SECRET);
-    req.user = user;
+    const user = jwt.verify(accessToken, ACCESS_TOKEN_SECRET) as { userId: string };
+    (req as any).user = user
     next();
   } catch (error) {
     return res.status(401).json({ message: 'Invalid or expired token' });

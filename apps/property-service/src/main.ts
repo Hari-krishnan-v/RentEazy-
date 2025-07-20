@@ -1,18 +1,22 @@
-/**
- * This is not a production server yet!
- * This is only a minimal backend to get started.
- */
 
 import express from 'express';
-import * as path from 'path';
-
+import {errorMiddleware} from "../../../packages/error-handler/error-middleware";
+import cookieParser from 'cookie-parser';
 const app = express();
 
-app.use('/assets', express.static(path.join(__dirname, 'assets')));
+
+app.use(express.json());
+app.use(cookieParser());
+
 
 app.get('/api', (req, res) => {
   res.send({ message: 'Welcome to property-service!' });
 });
+
+// Middleware
+app.use(errorMiddleware);
+
+// Import routes
 
 const port = process.env.PORT || 3002;
 const server = app.listen(port, () => {

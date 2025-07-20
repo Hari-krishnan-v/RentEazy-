@@ -19,6 +19,7 @@ app.get('/', (req, res) => {
 // Import routes
 app.use('/api',router)
 
+
 app.use(errorMiddleware)
 
 app.listen(port, host, () => {

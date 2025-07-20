@@ -13,76 +13,11 @@ enum Role {
   HOST
 }
 
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
-  firstname String?
-  lastname  String?
-  password  String
-  role      Role     @default(USER)
-  bio       String?
-  phone     String?
-  altphone  String?
-  avatarUrl String?
-  location  String?
-  properties Property[]
-  bookings  Booking[]
-  payments  Payment[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-
-model Property {
-  id          String     @id @default(uuid())
-  title       String
-  description String
-  price       Float
-  location    String
-  image       String?
-  host        User       @relation(fields: [hostId], references: [id])
-  hostId      String
-  bookings    Booking[]
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-}
-
-model Booking {
-  id          String     @id @default(uuid())
-  user        User       @relation(fields: [userId], references: [id])
-  userId      String
-  property    Property   @relation(fields: [propertyId], references: [id])
-  propertyId  String
-  startDate   DateTime
-  endDate     DateTime
-  totalPrice  Float
-  payment     Payment?
-  status      BookingStatus @default(PENDING)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-}
-
-
 enum BookingStatus {
   PENDING
   CONFIRMED
   CANCELLED
   COMPLETED
-}
-
-model Payment {
-  id         String     @id @default(uuid())
-  user       User       @relation(fields: [userId], references: [id])
-  userId     String
-  booking    Booking    @relation(fields: [bookingId], references: [id])
-  bookingId  String     @unique
-  amount     Float
-  method     PaymentMethod
-  status     PaymentStatus @default(PENDING)
-  paidAt     DateTime?
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
 }
 
 enum PaymentMethod {
@@ -97,4 +32,114 @@ enum PaymentStatus {
   SUCCESS
   FAILED
   CANCELLED
+}
+
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  name         String?
+  firstname    String?
+  lastname     String?
+  password     String
+  role         Role          @default(USER)
+  avatarUrl    String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  // Profiles
+  hostProfile  HostProfile?
+  userProfile  UserProfile?
+}
+
+model HostProfile {
+  id               String        @id @default(uuid())
+  user             User          @relation(fields: [userId], references: [id])
+  userId           String        @unique
+  companyName      String?
+  kycDocument      String?
+  gstNumber        String?
+  phone            String?
+  altPhone         String?
+  location         String?
+  bio              String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  // Host owns properties
+  properties       Property[]
+
+  // Payments received by host
+  paymentsReceived Payment[]     @relation("HostPayments")
+}
+
+model UserProfile {
+  id             String       @id @default(uuid())
+  user           User         @relation(fields: [userId], references: [id])
+  userId         String       @unique
+  phone          String?
+  altPhone       String?
+  location       String?
+  bio            String?
+  budgetRange    String?
+  rentalHistory  String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  // Tenant-specific relations
+  bookings       Booking[]    @relation("TenantBookings")
+  paymentsSent   Payment[]    @relation("TenantPayments")
+}
+
+model Property {
+  id             String       @id @default(uuid())
+  title          String
+  description    String
+  price          Float
+  landmark       String
+  city           String
+  state          String
+  country        String
+  pincode        String
+  images         String[]
+  hostProfile    HostProfile  @relation(fields: [hostProfileId], references: [id])
+  hostProfileId  String
+  bookings       Booking[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model Booking {
+  id             String       @id @default(uuid())
+  tenantProfile  UserProfile  @relation("TenantBookings", fields: [tenantProfileId], references: [id])
+  tenantProfileId String
+  property       Property     @relation(fields: [propertyId], references: [id])
+  propertyId     String
+  startDate      DateTime
+  endDate        DateTime
+  totalPrice     Float
+  payment        Payment?
+  status         BookingStatus @default(PENDING)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  booking        Booking       @relation(fields: [bookingId], references: [id])
+  bookingId      String        @unique
+
+  // Who paid (tenant via UserProfile)
+  sender         UserProfile   @relation("TenantPayments", fields: [senderId], references: [id])
+  senderId       String
+
+  // Who received (host via HostProfile)
+  receiver       HostProfile   @relation("HostPayments", fields: [receiverId], references: [id])
+  receiverId     String
+
+  amount         Float
+  method         PaymentMethod
+  status         PaymentStatus @default(PENDING)
+  paidAt         DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 }
