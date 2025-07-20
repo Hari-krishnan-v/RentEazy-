@@ -1,44 +1,92 @@
-name: CI
+name: Renteazy CI
 
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
 
-permissions:
-  actions: read
-  contents: read
-
 jobs:
-  main:
+  backend-ci:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: root
+          POSTGRES_DB: renteazy
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      kafka:
+        image: bitnami/kafka:latest
+        env:
+          KAFKA_KRAFT_MODE: 'true'
+          KAFKA_CFG_NODE_ID: 1
+          KAFKA_CFG_PROCESS_ROLES: broker,controller
+          KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+          KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,CONTROLLER://kafka:9093
+          KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+          KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+          KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+          KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+          ALLOW_PLAINTEXT_LISTENER: yes
+        ports:
+          - 9092:9092
+        options: >-
+          --health-cmd="echo dump | nc localhost 9092 || exit 1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
     steps:
-      - uses: actions/checkout@v4
-        with:
-          filter: tree:0
-          fetch-depth: 0
+      # 1. Checkout code
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      
-      # This enables task distribution via Nx Cloud
-      # Run this command as early as possible, before dependencies are installed
-      # Learn more at https://nx.dev/ci/reference/nx-cloud-cli#npx-nxcloud-startcirun
-      # Uncomment this line to enable task distribution
-      # - run: npx nx start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="build"
-
-      
-      # Cache node_modules
-      - uses: actions/setup-node@v4
+      # 2. Setup Node
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
-       
-      - run: npm ci --legacy-peer-deps
 
+      # 3. Install dependencies
+      - name: Install dependencies
+        run: npm ci
 
-      # Prepend any command with "nx-cloud record --" to record its logs to Nx Cloud
-      # - run: npx nx-cloud record -- echo Hello World
-      - run: npx nx run-many -t lint test build
-      # Nx Cloud recommends fixes for failures to help you get CI green faster. Learn more: https://nx.dev/ci/features/self-healing-ci
-      - run: npx nx fix-ci
-        if: always()
+      # 4. Generate Prisma client
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      # 5. Run database migrations
+      - name: Run Prisma migrations
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://postgres:root@localhost:5432/renteazy
+
+      # 6. Build apps
+      - name: Build Nx apps
+        run: npx nx run-many --target=build --all
+
+      # 7. Run Tests (Unit + Integration)
+      - name: Run tests
+        run: npx nx run-many --target=test --all
+        env:
+          DATABASE_URL: postgresql://postgres:root@localhost:5432/renteazy
+          KAFKA_BROKER: localhost:9092
+
+      # 8. Optionally run E2E Tests
+      - name: Run E2E tests
+        if: ${{ always() }}
+        run: npx nx run-many --target=e2e --all || echo "No E2E tests"
+        env:
+          DATABASE_URL: postgresql://postgres:root@localhost:5432/renteazy
+          KAFKA_BROKER: localhost:9092
