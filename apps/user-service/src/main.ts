@@ -10,9 +10,7 @@ async function startUserConsumer() {
       const { userId, data } = event;
       await prisma.userProfile.create({
         data: {
-          user: {
-            connect: { id: userId },
-          },
+         id: userId,
           ...data,
         },
       });
@@ -31,7 +29,7 @@ async function startUserConsumer() {
       const { userId } = event;
       await prisma.userProfile.deleteMany({
         where: {
-          userId: userId,
+          id: userId,
         },
       });
 
@@ -47,7 +45,7 @@ async function startUserConsumer() {
       const { userId, data } = event;
       await prisma.userProfile.updateMany({
         where: {
-          userId: userId,
+          id: userId,
         },
         data: {
           ...data,

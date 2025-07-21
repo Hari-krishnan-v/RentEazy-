@@ -17,6 +17,7 @@ import {  publishEvent, KafkaTopics, EventTypes } from "../../../../libs/kafka/s
 interface AuthenticatedRequest extends Request {
   user?: { userId: string };
 }
+
 // user controls
 
 export const RegisterUser = async (req:Request,res:Response, next:NextFunction) => {
@@ -175,13 +176,23 @@ export const RefreshAccessToken = async (req:Request,res:Response,next:NextFunct
 export const GetAllUsers = async (req:Request,res:Response,next:NextFunction) => {
   try {
     const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        createdAt: true,
-        updatedAt: true
+      where: {
+        role: "USER"
+      },
+      include: {
+        userProfile: {
+          select: {
+            phone: true,
+            altPhone: true,
+            location: true,
+            bio: true,
+            budgetRange: true,
+            createdAt: true,
+            updatedAt: true
+          }
+        }
       }
+
     });
     return res.status(200).json({ users });
   } catch (error) {
@@ -244,9 +255,8 @@ export const GetUserProfile = async (req:AuthenticatedRequest,res:Response,next:
     }
 
     const user = await prisma.userProfile.findUnique({
-      where: { userId },
+      where: {id: userId },
       select: {
-        id: true,
         phone: true,
         altPhone: true,
         location: true,

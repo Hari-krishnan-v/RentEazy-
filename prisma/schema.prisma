@@ -52,9 +52,8 @@ model User {
 }
 
 model HostProfile {
-  id               String        @id @default(uuid())
-  user             User          @relation(fields: [userId], references: [id])
-  userId           String        @unique
+  id         String       @unique
+  user           User         @relation(fields: [id], references: [id])
   companyName      String?
   kycDocument      String?
   gstNumber        String?
@@ -73,9 +72,8 @@ model HostProfile {
 }
 
 model UserProfile {
-  id             String       @id @default(uuid())
-  user           User         @relation(fields: [userId], references: [id])
-  userId         String       @unique
+  id         String       @unique
+  user           User         @relation(fields: [id], references: [id])
   phone          String?
   altPhone       String?
   location       String?
